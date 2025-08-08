@@ -23,10 +23,16 @@ class NeonSnake {
         // Particle systems
         this.particles = [];
         this.tracers = [];
+        this.sparks = [];
+        this.waveEffects = [];
         
         // Audio context
         this.audioContext = null;
         this.initAudio();
+        
+        // Particle intensity
+        this.particleIntensity = 3;
+        this.setupParticleSlider();
         
         // Game loop
         this.lastTime = 0;
@@ -39,6 +45,16 @@ class NeonSnake {
         
         // Start game loop
         this.gameLoop();
+    }
+    
+    setupParticleSlider() {
+        const slider = document.getElementById('particleSlider');
+        const value = document.getElementById('particleValue');
+        
+        slider.addEventListener('input', (e) => {
+            this.particleIntensity = parseInt(e.target.value);
+            value.textContent = this.particleIntensity;
+        });
     }
     
     initAudio() {
@@ -68,6 +84,43 @@ class NeonSnake {
         oscillator.stop(this.audioContext.currentTime + duration);
     }
     
+    playMultiToneSound(baseFreq, duration) {
+        if (!this.audioContext) return;
+        
+        const frequencies = [baseFreq, baseFreq * 1.5, baseFreq * 2];
+        frequencies.forEach((freq, index) => {
+            setTimeout(() => {
+                this.playSound(freq, duration * 0.3, 'square');
+            }, index * 50);
+        });
+    }
+    
+    playWaveSound() {
+        if (!this.audioContext) return;
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        const filter = this.audioContext.createBiquadFilter();
+        
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(2000, this.audioContext.currentTime);
+        filter.frequency.exponentialRampToValueAtTime(200, this.audioContext.currentTime + 0.5);
+        
+        oscillator.frequency.setValueAtTime(400, this.audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(100, this.audioContext.currentTime + 0.5);
+        oscillator.type = 'sawtooth';
+        
+        gainNode.gain.setValueAtTime(0.05, this.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.5);
+        
+        oscillator.start(this.audioContext.currentTime);
+        oscillator.stop(this.audioContext.currentTime + 0.5);
+    }
+    
     setupInput() {
         document.addEventListener('keydown', (e) => {
             this.keys[e.code] = true;
@@ -90,7 +143,8 @@ class NeonSnake {
     startGame() {
         this.gameState = 'playing';
         document.getElementById('startScreen').style.display = 'none';
-        this.playSound(440, 0.1, 'square');
+        this.playMultiToneSound(440, 0.2);
+        this.createWaveEffect(this.width/2, this.height/2, 100);
     }
     
     restartGame() {
@@ -104,8 +158,11 @@ class NeonSnake {
         this.food = this.generateFood();
         this.particles = [];
         this.tracers = [];
+        this.sparks = [];
+        this.waveEffects = [];
         document.getElementById('gameOver').style.display = 'none';
-        this.playSound(880, 0.1, 'square');
+        this.playMultiToneSound(880, 0.2);
+        this.createWaveEffect(this.width/2, this.height/2, 150);
     }
     
     gameOver() {
@@ -113,7 +170,9 @@ class NeonSnake {
         document.getElementById('finalScore').textContent = this.score;
         document.getElementById('gameOver').style.display = 'block';
         this.playSound(200, 0.5, 'sawtooth');
-        this.createExplosion(this.snake[0].x, this.snake[0].y, 50);
+        this.createExplosion(this.snake[0].x, this.snake[0].y, 50 * this.particleIntensity);
+        this.createSparkStorm(this.snake[0].x, this.snake[0].y, 100 * this.particleIntensity);
+        this.playWaveSound();
     }
     
     generateFood() {
@@ -136,20 +195,53 @@ class NeonSnake {
             life: life,
             maxLife: life,
             color: color,
-            size: Math.random() * 3 + 1
+            size: Math.random() * (this.particleIntensity * 2) + 1
         };
     }
     
     createExplosion(x, y, count) {
         for (let i = 0; i < count; i++) {
             const angle = (Math.PI * 2 * i) / count;
-            const speed = Math.random() * 5 + 2;
+            const speed = Math.random() * (this.particleIntensity * 3) + 2;
             const velocity = {
                 x: Math.cos(angle) * speed,
                 y: Math.sin(angle) * speed
             };
-            this.particles.push(this.createParticle(x, y, this.getRandomNeonColor(), velocity, 60));
+            this.particles.push(this.createParticle(x, y, this.getRandomNeonColor(), velocity, 60 + this.particleIntensity * 10));
         }
+    }
+    
+    createSparkStorm(x, y, count) {
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 8 + 3;
+            const velocity = {
+                x: Math.cos(angle) * speed,
+                y: Math.sin(angle) * speed
+            };
+            this.sparks.push({
+                x: x,
+                y: y,
+                vx: velocity.x,
+                vy: velocity.y,
+                life: 40 + this.particleIntensity * 5,
+                maxLife: 40 + this.particleIntensity * 5,
+                color: this.getRandomNeonColor(),
+                size: Math.random() * (this.particleIntensity * 3) + 2
+            });
+        }
+    }
+    
+    createWaveEffect(x, y, radius) {
+        this.waveEffects.push({
+            x: x,
+            y: y,
+            radius: 0,
+            maxRadius: radius,
+            life: 60,
+            maxLife: 60,
+            color: this.getRandomNeonColor()
+        });
     }
     
     createTracer(x, y, color) {
@@ -167,10 +259,39 @@ class NeonSnake {
             const particle = this.particles[i];
             particle.x += particle.vx;
             particle.y += particle.vy;
+            particle.vx *= 0.98; // Air resistance
+            particle.vy *= 0.98;
             particle.life--;
             
             if (particle.life <= 0) {
                 this.particles.splice(i, 1);
+            }
+        }
+    }
+    
+    updateSparks() {
+        for (let i = this.sparks.length - 1; i >= 0; i--) {
+            const spark = this.sparks[i];
+            spark.x += spark.vx;
+            spark.y += spark.vy;
+            spark.vx *= 0.95;
+            spark.vy *= 0.95;
+            spark.life--;
+            
+            if (spark.life <= 0) {
+                this.sparks.splice(i, 1);
+            }
+        }
+    }
+    
+    updateWaveEffects() {
+        for (let i = this.waveEffects.length - 1; i >= 0; i--) {
+            const wave = this.waveEffects[i];
+            wave.radius += wave.maxRadius / wave.maxLife;
+            wave.life--;
+            
+            if (wave.life <= 0) {
+                this.waveEffects.splice(i, 1);
             }
         }
     }
@@ -233,14 +354,38 @@ class NeonSnake {
             // Create tracer for head
             this.createTracer(head.x + this.gridSize/2, head.y + this.gridSize/2, '#00ff00');
             
+            // Random spark trail
+            if (Math.random() < 0.3) {
+                this.sparks.push({
+                    x: head.x + this.gridSize/2 + (Math.random() - 0.5) * 10,
+                    y: head.y + this.gridSize/2 + (Math.random() - 0.5) * 10,
+                    vx: (Math.random() - 0.5) * 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    life: 20,
+                    maxLife: 20,
+                    color: this.getRandomNeonColor(),
+                    size: Math.random() * 2 + 1
+                });
+            }
+            
             // Check food collision
             if (head.x === this.food.x && head.y === this.food.y) {
+                const oldLevel = this.level;
                 this.score += 10 * this.level;
                 this.level = Math.floor(this.score / 100) + 1;
                 this.speed = Math.min(5, 1 + this.level * 0.5);
                 this.food = this.generateFood();
-                this.playSound(660, 0.1, 'triangle');
-                this.createExplosion(this.food.x + this.gridSize/2, this.food.y + this.gridSize/2, 20);
+                this.playMultiToneSound(660, 0.15);
+                this.createExplosion(this.food.x + this.gridSize/2, this.food.y + this.gridSize/2, 20 * this.particleIntensity);
+                this.createSparkStorm(this.food.x + this.gridSize/2, this.food.y + this.gridSize/2, 15 * this.particleIntensity);
+                this.createWaveEffect(this.food.x + this.gridSize/2, this.food.y + this.gridSize/2, 50);
+                
+                // Level up effect
+                if (this.level > oldLevel) {
+                    this.playMultiToneSound(880, 0.3);
+                    this.createWaveEffect(this.width/2, this.height/2, 200);
+                    this.createSparkStorm(this.width/2, this.height/2, 50 * this.particleIntensity);
+                }
             } else {
                 this.snake.pop();
             }
@@ -252,6 +397,8 @@ class NeonSnake {
         }
         
         this.updateParticles();
+        this.updateSparks();
+        this.updateWaveEffects();
         this.updateTracers();
     }
     
@@ -266,7 +413,7 @@ class NeonSnake {
             
             // Glow effect
             this.ctx.shadowColor = color;
-            this.ctx.shadowBlur = 10;
+            this.ctx.shadowBlur = 10 + this.particleIntensity;
             this.ctx.strokeStyle = '#ffffff';
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(segment.x, segment.y, this.gridSize, this.gridSize);
@@ -275,7 +422,18 @@ class NeonSnake {
             // Head special effect
             if (index === 0) {
                 this.ctx.fillStyle = '#ffffff';
+                this.ctx.shadowColor = '#ffffff';
+                this.ctx.shadowBlur = 15;
                 this.ctx.fillRect(segment.x + 5, segment.y + 5, 10, 10);
+                this.ctx.shadowBlur = 0;
+                
+                // Energy aura around head
+                this.ctx.strokeStyle = '#00ffff';
+                this.ctx.lineWidth = 3;
+                this.ctx.shadowColor = '#00ffff';
+                this.ctx.shadowBlur = 8;
+                this.ctx.strokeRect(segment.x - 2, segment.y - 2, this.gridSize + 4, this.gridSize + 4);
+                this.ctx.shadowBlur = 0;
             }
         });
     }
@@ -288,7 +446,7 @@ class NeonSnake {
         
         this.ctx.fillStyle = this.food.color;
         this.ctx.shadowColor = this.food.color;
-        this.ctx.shadowBlur = 15;
+        this.ctx.shadowBlur = 15 + this.particleIntensity * 2;
         this.ctx.fillRect(
             this.food.x + offset, 
             this.food.y + offset, 
@@ -301,6 +459,14 @@ class NeonSnake {
         this.ctx.strokeStyle = '#ffffff';
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(this.food.x, this.food.y, this.gridSize, this.gridSize);
+        
+        // Energy field around food
+        this.ctx.strokeStyle = this.food.color;
+        this.ctx.lineWidth = 1;
+        this.ctx.shadowColor = this.food.color;
+        this.ctx.shadowBlur = 5;
+        this.ctx.strokeRect(this.food.x - 5, this.food.y - 5, this.gridSize + 10, this.gridSize + 10);
+        this.ctx.shadowBlur = 0;
     }
     
     drawParticles() {
@@ -309,8 +475,37 @@ class NeonSnake {
             this.ctx.globalAlpha = alpha;
             this.ctx.fillStyle = particle.color;
             this.ctx.shadowColor = particle.color;
-            this.ctx.shadowBlur = 5;
+            this.ctx.shadowBlur = 5 + this.particleIntensity;
             this.ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
+            this.ctx.shadowBlur = 0;
+        });
+        this.ctx.globalAlpha = 1;
+    }
+    
+    drawSparks() {
+        this.sparks.forEach(spark => {
+            const alpha = spark.life / spark.maxLife;
+            this.ctx.globalAlpha = alpha;
+            this.ctx.fillStyle = spark.color;
+            this.ctx.shadowColor = spark.color;
+            this.ctx.shadowBlur = 8 + this.particleIntensity * 2;
+            this.ctx.fillRect(spark.x, spark.y, spark.size, spark.size);
+            this.ctx.shadowBlur = 0;
+        });
+        this.ctx.globalAlpha = 1;
+    }
+    
+    drawWaveEffects() {
+        this.waveEffects.forEach(wave => {
+            const alpha = wave.life / wave.maxLife;
+            this.ctx.globalAlpha = alpha * 0.5;
+            this.ctx.strokeStyle = wave.color;
+            this.ctx.lineWidth = 2;
+            this.ctx.shadowColor = wave.color;
+            this.ctx.shadowBlur = 10;
+            this.ctx.beginPath();
+            this.ctx.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2);
+            this.ctx.stroke();
             this.ctx.shadowBlur = 0;
         });
         this.ctx.globalAlpha = 1;
@@ -330,7 +525,12 @@ class NeonSnake {
     }
     
     drawGrid() {
-        this.ctx.strokeStyle = '#333333';
+        // Animated grid with color cycling
+        const time = Date.now() * 0.001;
+        const hue = (time * 30) % 360;
+        const gridColor = `hsla(${hue}, 50%, 20%, 0.3)`;
+        
+        this.ctx.strokeStyle = gridColor;
         this.ctx.lineWidth = 1;
         
         for (let x = 0; x < this.width; x += this.gridSize) {
@@ -341,6 +541,16 @@ class NeonSnake {
         }
         
         for (let y = 0; y < this.height; y += this.gridSize) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.width, y);
+            this.ctx.stroke();
+        }
+        
+        // Add some scanlines for retro effect
+        this.ctx.strokeStyle = 'rgba(0, 255, 255, 0.1)';
+        this.ctx.lineWidth = 1;
+        for (let y = 0; y < this.height; y += 4) {
             this.ctx.beginPath();
             this.ctx.moveTo(0, y);
             this.ctx.lineTo(this.width, y);
@@ -358,7 +568,9 @@ class NeonSnake {
         
         // Draw game elements
         this.drawTracers();
+        this.drawWaveEffects();
         this.drawParticles();
+        this.drawSparks();
         this.drawFood();
         this.drawSnake();
     }

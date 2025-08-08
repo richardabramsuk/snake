@@ -1,0 +1,385 @@
+class NeonSnake {
+    constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
+        
+        // Game state
+        this.gameState = 'start'; // start, playing, gameOver
+        this.score = 0;
+        this.level = 1;
+        this.speed = 1;
+        
+        // Snake properties
+        this.snake = [{x: 400, y: 300}];
+        this.direction = {x: 0, y: 0};
+        this.nextDirection = {x: 0, y: 0};
+        this.gridSize = 20;
+        
+        // Food
+        this.food = this.generateFood();
+        
+        // Particle systems
+        this.particles = [];
+        this.tracers = [];
+        
+        // Audio context
+        this.audioContext = null;
+        this.initAudio();
+        
+        // Game loop
+        this.lastTime = 0;
+        this.accumulator = 0;
+        this.timeStep = 150; // milliseconds per frame
+        
+        // Input handling
+        this.keys = {};
+        this.setupInput();
+        
+        // Start game loop
+        this.gameLoop();
+    }
+    
+    initAudio() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {
+            console.log('Audio not supported');
+        }
+    }
+    
+    playSound(frequency, duration, type = 'sine') {
+        if (!this.audioContext) return;
+        
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+        oscillator.type = type;
+        
+        gainNode.gain.setValueAtTime(0.1, this.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration);
+        
+        oscillator.start(this.audioContext.currentTime);
+        oscillator.stop(this.audioContext.currentTime + duration);
+    }
+    
+    setupInput() {
+        document.addEventListener('keydown', (e) => {
+            this.keys[e.code] = true;
+            
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (this.gameState === 'start') {
+                    this.startGame();
+                } else if (this.gameState === 'gameOver') {
+                    this.restartGame();
+                }
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            this.keys[e.code] = false;
+        });
+    }
+    
+    startGame() {
+        this.gameState = 'playing';
+        document.getElementById('startScreen').style.display = 'none';
+        this.playSound(440, 0.1, 'square');
+    }
+    
+    restartGame() {
+        this.gameState = 'playing';
+        this.score = 0;
+        this.level = 1;
+        this.speed = 1;
+        this.snake = [{x: 400, y: 300}];
+        this.direction = {x: 0, y: 0};
+        this.nextDirection = {x: 0, y: 0};
+        this.food = this.generateFood();
+        this.particles = [];
+        this.tracers = [];
+        document.getElementById('gameOver').style.display = 'none';
+        this.playSound(880, 0.1, 'square');
+    }
+    
+    gameOver() {
+        this.gameState = 'gameOver';
+        document.getElementById('finalScore').textContent = this.score;
+        document.getElementById('gameOver').style.display = 'block';
+        this.playSound(200, 0.5, 'sawtooth');
+        this.createExplosion(this.snake[0].x, this.snake[0].y, 50);
+    }
+    
+    generateFood() {
+        const x = Math.floor(Math.random() * (this.width / this.gridSize)) * this.gridSize;
+        const y = Math.floor(Math.random() * (this.height / this.gridSize)) * this.gridSize;
+        return {x, y, color: this.getRandomNeonColor()};
+    }
+    
+    getRandomNeonColor() {
+        const colors = ['#ff00ff', '#00ffff', '#ffff00', '#ff0080', '#00ff80', '#8000ff'];
+        return colors[Math.floor(Math.random() * colors.length)];
+    }
+    
+    createParticle(x, y, color, velocity, life) {
+        return {
+            x: x,
+            y: y,
+            vx: velocity.x,
+            vy: velocity.y,
+            life: life,
+            maxLife: life,
+            color: color,
+            size: Math.random() * 3 + 1
+        };
+    }
+    
+    createExplosion(x, y, count) {
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i) / count;
+            const speed = Math.random() * 5 + 2;
+            const velocity = {
+                x: Math.cos(angle) * speed,
+                y: Math.sin(angle) * speed
+            };
+            this.particles.push(this.createParticle(x, y, this.getRandomNeonColor(), velocity, 60));
+        }
+    }
+    
+    createTracer(x, y, color) {
+        this.tracers.push({
+            x: x,
+            y: y,
+            life: 30,
+            maxLife: 30,
+            color: color
+        });
+    }
+    
+    updateParticles() {
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const particle = this.particles[i];
+            particle.x += particle.vx;
+            particle.y += particle.vy;
+            particle.life--;
+            
+            if (particle.life <= 0) {
+                this.particles.splice(i, 1);
+            }
+        }
+    }
+    
+    updateTracers() {
+        for (let i = this.tracers.length - 1; i >= 0; i--) {
+            const tracer = this.tracers[i];
+            tracer.life--;
+            
+            if (tracer.life <= 0) {
+                this.tracers.splice(i, 1);
+            }
+        }
+    }
+    
+    handleInput() {
+        if (this.keys['ArrowUp'] && this.direction.y === 0) {
+            this.nextDirection = {x: 0, y: -1};
+        } else if (this.keys['ArrowDown'] && this.direction.y === 0) {
+            this.nextDirection = {x: 0, y: 1};
+        } else if (this.keys['ArrowLeft'] && this.direction.x === 0) {
+            this.nextDirection = {x: -1, y: 0};
+        } else if (this.keys['ArrowRight'] && this.direction.x === 0) {
+            this.nextDirection = {x: 1, y: 0};
+        }
+    }
+    
+    update() {
+        if (this.gameState !== 'playing') return;
+        
+        this.handleInput();
+        
+        // Update direction
+        if (this.nextDirection.x !== 0 || this.nextDirection.y !== 0) {
+            this.direction = {...this.nextDirection};
+        }
+        
+        // Move snake
+        if (this.direction.x !== 0 || this.direction.y !== 0) {
+            const head = {...this.snake[0]};
+            head.x += this.direction.x * this.gridSize;
+            head.y += this.direction.y * this.gridSize;
+            
+            // Check boundaries
+            if (head.x < 0) head.x = this.width - this.gridSize;
+            if (head.x >= this.width) head.x = 0;
+            if (head.y < 0) head.y = this.height - this.gridSize;
+            if (head.y >= this.height) head.y = 0;
+            
+            // Check collision with self
+            for (let segment of this.snake) {
+                if (head.x === segment.x && head.y === segment.y) {
+                    this.gameOver();
+                    return;
+                }
+            }
+            
+            this.snake.unshift(head);
+            
+            // Create tracer for head
+            this.createTracer(head.x + this.gridSize/2, head.y + this.gridSize/2, '#00ff00');
+            
+            // Check food collision
+            if (head.x === this.food.x && head.y === this.food.y) {
+                this.score += 10 * this.level;
+                this.level = Math.floor(this.score / 100) + 1;
+                this.speed = Math.min(5, 1 + this.level * 0.5);
+                this.food = this.generateFood();
+                this.playSound(660, 0.1, 'triangle');
+                this.createExplosion(this.food.x + this.gridSize/2, this.food.y + this.gridSize/2, 20);
+            } else {
+                this.snake.pop();
+            }
+            
+            // Update UI
+            document.getElementById('score').textContent = this.score;
+            document.getElementById('level').textContent = this.level;
+            document.getElementById('speed').textContent = this.speed.toFixed(1);
+        }
+        
+        this.updateParticles();
+        this.updateTracers();
+    }
+    
+    drawSnake() {
+        this.snake.forEach((segment, index) => {
+            const hue = (120 + index * 10) % 360;
+            const color = `hsl(${hue}, 100%, 50%)`;
+            
+            // Main body
+            this.ctx.fillStyle = color;
+            this.ctx.fillRect(segment.x, segment.y, this.gridSize, this.gridSize);
+            
+            // Glow effect
+            this.ctx.shadowColor = color;
+            this.ctx.shadowBlur = 10;
+            this.ctx.strokeStyle = '#ffffff';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(segment.x, segment.y, this.gridSize, this.gridSize);
+            this.ctx.shadowBlur = 0;
+            
+            // Head special effect
+            if (index === 0) {
+                this.ctx.fillStyle = '#ffffff';
+                this.ctx.fillRect(segment.x + 5, segment.y + 5, 10, 10);
+            }
+        });
+    }
+    
+    drawFood() {
+        // Pulsing effect
+        const pulse = Math.sin(Date.now() * 0.01) * 0.3 + 0.7;
+        const size = this.gridSize * pulse;
+        const offset = (this.gridSize - size) / 2;
+        
+        this.ctx.fillStyle = this.food.color;
+        this.ctx.shadowColor = this.food.color;
+        this.ctx.shadowBlur = 15;
+        this.ctx.fillRect(
+            this.food.x + offset, 
+            this.food.y + offset, 
+            size, 
+            size
+        );
+        this.ctx.shadowBlur = 0;
+        
+        // Orb effect
+        this.ctx.strokeStyle = '#ffffff';
+        this.ctx.lineWidth = 2;
+        this.ctx.strokeRect(this.food.x, this.food.y, this.gridSize, this.gridSize);
+    }
+    
+    drawParticles() {
+        this.particles.forEach(particle => {
+            const alpha = particle.life / particle.maxLife;
+            this.ctx.globalAlpha = alpha;
+            this.ctx.fillStyle = particle.color;
+            this.ctx.shadowColor = particle.color;
+            this.ctx.shadowBlur = 5;
+            this.ctx.fillRect(particle.x, particle.y, particle.size, particle.size);
+            this.ctx.shadowBlur = 0;
+        });
+        this.ctx.globalAlpha = 1;
+    }
+    
+    drawTracers() {
+        this.tracers.forEach(tracer => {
+            const alpha = tracer.life / tracer.maxLife;
+            this.ctx.globalAlpha = alpha * 0.5;
+            this.ctx.fillStyle = tracer.color;
+            this.ctx.shadowColor = tracer.color;
+            this.ctx.shadowBlur = 8;
+            this.ctx.fillRect(tracer.x - 2, tracer.y - 2, 4, 4);
+            this.ctx.shadowBlur = 0;
+        });
+        this.ctx.globalAlpha = 1;
+    }
+    
+    drawGrid() {
+        this.ctx.strokeStyle = '#333333';
+        this.ctx.lineWidth = 1;
+        
+        for (let x = 0; x < this.width; x += this.gridSize) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, 0);
+            this.ctx.lineTo(x, this.height);
+            this.ctx.stroke();
+        }
+        
+        for (let y = 0; y < this.height; y += this.gridSize) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(0, y);
+            this.ctx.lineTo(this.width, y);
+            this.ctx.stroke();
+        }
+    }
+    
+    render() {
+        // Clear canvas
+        this.ctx.fillStyle = '#000000';
+        this.ctx.fillRect(0, 0, this.width, this.height);
+        
+        // Draw grid
+        this.drawGrid();
+        
+        // Draw game elements
+        this.drawTracers();
+        this.drawParticles();
+        this.drawFood();
+        this.drawSnake();
+    }
+    
+    gameLoop(currentTime = 0) {
+        const deltaTime = currentTime - this.lastTime;
+        this.lastTime = currentTime;
+        
+        this.accumulator += deltaTime;
+        
+        while (this.accumulator >= this.timeStep / this.speed) {
+            this.update();
+            this.accumulator -= this.timeStep / this.speed;
+        }
+        
+        this.render();
+        requestAnimationFrame((time) => this.gameLoop(time));
+    }
+}
+
+// Initialize game when page loads
+window.addEventListener('load', () => {
+    new NeonSnake();
+});

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Snake - Tempest 2000 Style</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        #gameContainer {
+            position: relative;
+            border: 3px solid #ff00ff;
+            box-shadow: 0 0 20px #ff00ff, inset 0 0 20px rgba(255, 0, 255, 0.3);
+        }
+        
+        #gameCanvas {
+            display: block;
+            background: #000;
+        }
+        
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #00ffff;
+            font-size: 18px;
+            text-shadow: 0 0 10px #00ffff;
+            z-index: 10;
+        }
+        
+        #score {
+            color: #ffff00;
+            text-shadow: 0 0 10px #ffff00;
+        }
+        
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff0000;
+            font-size: 48px;
+            text-align: center;
+            text-shadow: 0 0 20px #ff0000;
+            display: none;
+            z-index: 20;
+        }
+        
+        #startScreen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff00;
+            font-size: 24px;
+            text-align: center;
+            text-shadow: 0 0 15px #00ff00;
+            z-index: 15;
+        }
+        
+        .neon-text {
+            animation: neon-pulse 2s ease-in-out infinite alternate;
+        }
+        
+        @keyframes neon-pulse {
+            from { text-shadow: 0 0 10px currentColor; }
+            to { text-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <div id="ui">
+            <div>Score: <span id="score">0</span></div>
+            <div>Level: <span id="level">1</span></div>
+            <div>Speed: <span id="speed">1</span></div>
+        </div>
+        <div id="startScreen">
+            <div class="neon-text">NEON SNAKE</div>
+            <div style="margin-top: 20px; font-size: 16px; color: #ffff00;">
+                Press SPACE to start<br>
+                Use ARROW KEYS to move<br>
+                Collect orbs to grow and score!
+            </div>
+        </div>
+        <div id="gameOver">
+            <div class="neon-text">GAME OVER</div>
+            <div style="margin-top: 20px; font-size: 24px; color: #ffff00;">
+                Final Score: <span id="finalScore">0</span>
+            </div>
+            <div style="margin-top: 20px; font-size: 16px; color: #00ff00;">
+                Press SPACE to restart
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>

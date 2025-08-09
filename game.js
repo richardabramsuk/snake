@@ -47,19 +47,20 @@ class NeonSnake {
         // Start game loop
         this.gameLoop();
         
-        // Handle window resize
+        // Handle window resize and orientation change
         window.addEventListener('resize', () => {
-            this.setupCanvas();
+            setTimeout(() => this.setupCanvas(), 100);
+        });
+        
+        window.addEventListener('orientationchange', () => {
+            setTimeout(() => this.setupCanvas(), 200);
         });
     }
     
     setupCanvas() {
-        const container = document.getElementById('gameContainer');
-        const containerRect = container.getBoundingClientRect();
-        
-        // Set canvas size to fill the container
-        this.width = containerRect.width;
-        this.height = containerRect.height;
+        // Use viewport dimensions directly
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
         
         this.canvas.width = this.width;
         this.canvas.height = this.height;
@@ -81,14 +82,6 @@ class NeonSnake {
             mobileControls.style.display = 'none';
             swipeArea.style.display = 'none';
         }
-        
-        // Force a small delay to ensure proper sizing
-        setTimeout(() => {
-            const newRect = container.getBoundingClientRect();
-            if (newRect.width !== this.width || newRect.height !== this.height) {
-                this.setupCanvas();
-            }
-        }, 100);
     }
     
     setupParticleSlider() {

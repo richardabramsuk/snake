@@ -58,15 +58,20 @@ class NeonSnake {
     }
     
     setupCanvas() {
-        // Use viewport dimensions directly
-        this.width = window.innerWidth;
-        this.height = window.innerHeight;
+        const container = document.getElementById('gameContainer');
+        const containerRect = container.getBoundingClientRect();
+        
+        // Use container dimensions for proper sizing
+        this.width = containerRect.width;
+        this.height = containerRect.height;
         
         this.canvas.width = this.width;
         this.canvas.height = this.height;
         
-        // Adjust grid size for mobile
-        if (this.width < 500) {
+        // Adjust grid size based on screen size
+        if (this.width < 400) {
+            this.gridSize = 12;
+        } else if (this.width < 600) {
             this.gridSize = 15;
         } else {
             this.gridSize = 20;

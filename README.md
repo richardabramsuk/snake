@@ -33,7 +33,8 @@ A retro-futuristic snake game inspired by Jeff Minter's Tempest 2000, featuring 
 
 ### Mobile/iPhone
 - **TAP**: Start game / Restart after game over
-- **On-screen D-pad**: Control snake movement
+- **SWIPE**: Control snake movement (swipe in any direction)
+- **On-screen D-pad**: Alternative control method
 - **Particle Intensity Slider**: Adjust visual effects
 
 ## Game Mechanics

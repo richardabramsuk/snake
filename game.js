@@ -57,12 +57,9 @@ class NeonSnake {
         const container = document.getElementById('gameContainer');
         const containerRect = container.getBoundingClientRect();
         
-        // Set canvas size based on container and device
-        const maxWidth = Math.min(800, window.innerWidth - 40);
-        const maxHeight = Math.min(600, window.innerHeight - 40);
-        
-        this.width = maxWidth;
-        this.height = maxHeight;
+        // Set canvas size to fill the container
+        this.width = containerRect.width;
+        this.height = containerRect.height;
         
         this.canvas.width = this.width;
         this.canvas.height = this.height;
@@ -74,12 +71,15 @@ class NeonSnake {
             this.gridSize = 20;
         }
         
-        // Show mobile controls on touch devices
+        // Show mobile controls and swipe area on touch devices
         const mobileControls = document.getElementById('mobileControls');
+        const swipeArea = document.getElementById('swipeArea');
         if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
             mobileControls.style.display = 'block';
+            swipeArea.style.display = 'block';
         } else {
             mobileControls.style.display = 'none';
+            swipeArea.style.display = 'none';
         }
     }
     
@@ -177,6 +177,7 @@ class NeonSnake {
         
         // Mobile controls
         this.setupMobileControls();
+        this.setupSwipeControls();
         
         // Touch controls for start/restart
         document.addEventListener('touchstart', (e) => {
@@ -224,6 +225,60 @@ class NeonSnake {
         addTouchControl(downBtn, 'ArrowDown');
         addTouchControl(leftBtn, 'ArrowLeft');
         addTouchControl(rightBtn, 'ArrowRight');
+    }
+    
+    setupSwipeControls() {
+        const swipeArea = document.getElementById('swipeArea');
+        let startX = 0;
+        let startY = 0;
+        let isSwiping = false;
+        
+        const handleTouchStart = (e) => {
+            if (this.gameState !== 'playing') return;
+            
+            const touch = e.touches[0];
+            startX = touch.clientX;
+            startY = touch.clientY;
+            isSwiping = true;
+        };
+        
+        const handleTouchMove = (e) => {
+            if (!isSwiping || this.gameState !== 'playing') return;
+            
+            e.preventDefault();
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - startX;
+            const deltaY = touch.clientY - startY;
+            
+            // Determine swipe direction based on larger delta
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // Horizontal swipe
+                if (deltaX > 30 && this.direction.x === 0) {
+                    this.nextDirection = {x: 1, y: 0};
+                    isSwiping = false;
+                } else if (deltaX < -30 && this.direction.x === 0) {
+                    this.nextDirection = {x: -1, y: 0};
+                    isSwiping = false;
+                }
+            } else {
+                // Vertical swipe
+                if (deltaY > 30 && this.direction.y === 0) {
+                    this.nextDirection = {x: 0, y: 1};
+                    isSwiping = false;
+                } else if (deltaY < -30 && this.direction.y === 0) {
+                    this.nextDirection = {x: 0, y: -1};
+                    isSwiping = false;
+                }
+            }
+        };
+        
+        const handleTouchEnd = (e) => {
+            isSwiping = false;
+        };
+        
+        swipeArea.addEventListener('touchstart', handleTouchStart, { passive: false });
+        swipeArea.addEventListener('touchmove', handleTouchMove, { passive: false });
+        swipeArea.addEventListener('touchend', handleTouchEnd, { passive: false });
     }
     
     startGame() {

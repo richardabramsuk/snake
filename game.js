@@ -81,6 +81,14 @@ class NeonSnake {
             mobileControls.style.display = 'none';
             swipeArea.style.display = 'none';
         }
+        
+        // Force a small delay to ensure proper sizing
+        setTimeout(() => {
+            const newRect = container.getBoundingClientRect();
+            if (newRect.width !== this.width || newRect.height !== this.height) {
+                this.setupCanvas();
+            }
+        }, 100);
     }
     
     setupParticleSlider() {

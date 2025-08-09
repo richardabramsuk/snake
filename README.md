@@ -14,21 +14,27 @@ A retro-futuristic snake game inspired by Jeff Minter's Tempest 2000, featuring 
 
 ## How to Play
 
-1. Open `index.html` in a modern web browser
-2. Press **SPACE** to start the game
-3. Use **ARROW KEYS** to control the snake
+1. Open `index.html` in a modern web browser or on your iPhone
+2. Press **SPACE** (desktop) or **TAP** (mobile) to start the game
+3. Use **ARROW KEYS** (desktop) or **ON-SCREEN CONTROLS** (mobile) to control the snake
 4. Collect the colorful orbs to grow and score points
-5. Avoid hitting yourself
-6. The snake can wrap around the screen edges
-7. Press **SPACE** to restart when game over
+5. Avoid hitting yourself and the walls
+6. The walls are deadly boundaries - no wrapping!
+7. Press **SPACE** or **TAP** to restart when game over
 
 ## Controls
 
+### Desktop
 - **SPACE**: Start game / Restart after game over
 - **↑**: Move up
 - **↓**: Move down
 - **←**: Move left
 - **→**: Move right
+
+### Mobile/iPhone
+- **TAP**: Start game / Restart after game over
+- **On-screen D-pad**: Control snake movement
+- **Particle Intensity Slider**: Adjust visual effects
 
 ## Game Mechanics
 
@@ -36,21 +42,26 @@ A retro-futuristic snake game inspired by Jeff Minter's Tempest 2000, featuring 
 - **Leveling**: Every 100 points increases the level
 - **Speed**: Increases with each level (max 5x speed)
 - **Snake Growth**: Snake grows longer with each food collected
+- **Wall Boundaries**: Walls are deadly - no wrapping around edges
+- **Mobile Optimized**: Responsive design with touch controls
 - **Visual Effects**: 
   - Snake segments change color along the body
   - Food pulses and glows
   - Particle explosions on food collection
   - Tracer trails behind the snake head
   - Explosion effect on game over
+  - Adjustable particle intensity
 
 ## Technical Details
 
 - Built with HTML5 Canvas and vanilla JavaScript
 - Uses Web Audio API for synthesized sound effects
 - Responsive design with neon styling
+- Mobile-optimized with touch controls
 - Smooth 60fps gameplay with proper frame timing
 - Particle system with physics-based movement
 - Tracer system with fade-out effects
+- Adaptive canvas sizing for different screen sizes
 
 ## Browser Compatibility
 

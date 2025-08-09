@@ -2,8 +2,7 @@ class NeonSnake {
     constructor() {
         this.canvas = document.getElementById('gameCanvas');
         this.ctx = this.canvas.getContext('2d');
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
+        this.setupCanvas();
         
         // Game state
         this.gameState = 'start'; // start, playing, gameOver
@@ -12,10 +11,12 @@ class NeonSnake {
         this.speed = 1;
         
         // Snake properties
-        this.snake = [{x: 400, y: 300}];
+        this.snake = [{x: Math.floor(this.width / 2 / this.gridSize) * this.gridSize, y: Math.floor(this.height / 2 / this.gridSize) * this.gridSize}];
         this.direction = {x: 0, y: 0};
         this.nextDirection = {x: 0, y: 0};
         this.gridSize = 20;
+        
+
         
         // Food
         this.food = this.generateFood();
@@ -45,6 +46,41 @@ class NeonSnake {
         
         // Start game loop
         this.gameLoop();
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            this.setupCanvas();
+        });
+    }
+    
+    setupCanvas() {
+        const container = document.getElementById('gameContainer');
+        const containerRect = container.getBoundingClientRect();
+        
+        // Set canvas size based on container and device
+        const maxWidth = Math.min(800, window.innerWidth - 40);
+        const maxHeight = Math.min(600, window.innerHeight - 40);
+        
+        this.width = maxWidth;
+        this.height = maxHeight;
+        
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        
+        // Adjust grid size for mobile
+        if (this.width < 500) {
+            this.gridSize = 15;
+        } else {
+            this.gridSize = 20;
+        }
+        
+        // Show mobile controls on touch devices
+        const mobileControls = document.getElementById('mobileControls');
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            mobileControls.style.display = 'block';
+        } else {
+            mobileControls.style.display = 'none';
+        }
     }
     
     setupParticleSlider() {
@@ -138,6 +174,56 @@ class NeonSnake {
         document.addEventListener('keyup', (e) => {
             this.keys[e.code] = false;
         });
+        
+        // Mobile controls
+        this.setupMobileControls();
+        
+        // Touch controls for start/restart
+        document.addEventListener('touchstart', (e) => {
+            if (this.gameState === 'start' || this.gameState === 'gameOver') {
+                e.preventDefault();
+                if (this.gameState === 'start') {
+                    this.startGame();
+                } else if (this.gameState === 'gameOver') {
+                    this.restartGame();
+                }
+            }
+        });
+    }
+    
+    setupMobileControls() {
+        const upBtn = document.getElementById('upBtn');
+        const downBtn = document.getElementById('downBtn');
+        const leftBtn = document.getElementById('leftBtn');
+        const rightBtn = document.getElementById('rightBtn');
+        
+        const addTouchControl = (button, key) => {
+            button.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.keys[key] = true;
+            });
+            
+            button.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                this.keys[key] = false;
+            });
+            
+            // Also support mouse for testing
+            button.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                this.keys[key] = true;
+            });
+            
+            button.addEventListener('mouseup', (e) => {
+                e.preventDefault();
+                this.keys[key] = false;
+            });
+        };
+        
+        addTouchControl(upBtn, 'ArrowUp');
+        addTouchControl(downBtn, 'ArrowDown');
+        addTouchControl(leftBtn, 'ArrowLeft');
+        addTouchControl(rightBtn, 'ArrowRight');
     }
     
     startGame() {
@@ -145,6 +231,12 @@ class NeonSnake {
         document.getElementById('startScreen').style.display = 'none';
         this.playMultiToneSound(440, 0.2);
         this.createWaveEffect(this.width/2, this.height/2, 100);
+        
+        // Reset snake position for new game
+        this.snake = [{x: Math.floor(this.width / 2 / this.gridSize) * this.gridSize, y: Math.floor(this.height / 2 / this.gridSize) * this.gridSize}];
+        this.direction = {x: 0, y: 0};
+        this.nextDirection = {x: 0, y: 0};
+        this.food = this.generateFood();
     }
     
     restartGame() {
@@ -152,7 +244,7 @@ class NeonSnake {
         this.score = 0;
         this.level = 1;
         this.speed = 1;
-        this.snake = [{x: 400, y: 300}];
+        this.snake = [{x: Math.floor(this.width / 2 / this.gridSize) * this.gridSize, y: Math.floor(this.height / 2 / this.gridSize) * this.gridSize}];
         this.direction = {x: 0, y: 0};
         this.nextDirection = {x: 0, y: 0};
         this.food = this.generateFood();
@@ -335,11 +427,11 @@ class NeonSnake {
             head.x += this.direction.x * this.gridSize;
             head.y += this.direction.y * this.gridSize;
             
-            // Check boundaries
-            if (head.x < 0) head.x = this.width - this.gridSize;
-            if (head.x >= this.width) head.x = 0;
-            if (head.y < 0) head.y = this.height - this.gridSize;
-            if (head.y >= this.height) head.y = 0;
+            // Check boundaries - walls are now deadly
+            if (head.x < 0 || head.x >= this.width || head.y < 0 || head.y >= this.height) {
+                this.gameOver();
+                return;
+            }
             
             // Check collision with self
             for (let segment of this.snake) {

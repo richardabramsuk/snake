@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Neon Snake - Tempest 2000 Style</title>
     <style>
         body {
@@ -21,6 +21,8 @@
             position: relative;
             border: 3px solid #ff00ff;
             box-shadow: 0 0 20px #ff00ff, inset 0 0 20px rgba(255, 0, 255, 0.3);
+            max-width: 100vw;
+            max-height: 100vh;
         }
         
         #gameCanvas {
@@ -76,20 +78,118 @@
             from { text-shadow: 0 0 10px currentColor; }
             to { text-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
         }
+        
+        /* Mobile Controls */
+        #mobileControls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            z-index: 30;
+        }
+        
+        #dpad {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .middle-row {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .control-btn {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 0, 255, 0.3);
+            border: 2px solid #ff00ff;
+            color: #ff00ff;
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+            transition: all 0.1s ease;
+        }
+        
+        .control-btn:active {
+            background: rgba(255, 0, 255, 0.6);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.8);
+            transform: scale(0.95);
+        }
+        
+        /* Mobile responsive adjustments */
+        @media (max-width: 768px) {
+            #ui {
+                font-size: 14px;
+            }
+            
+            #ui div {
+                margin-bottom: 5px;
+            }
+            
+            #startScreen {
+                font-size: 18px;
+            }
+            
+            #gameOver {
+                font-size: 32px;
+            }
+            
+            .control-btn {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            #ui {
+                font-size: 12px;
+            }
+            
+            #startScreen {
+                font-size: 16px;
+            }
+            
+            #gameOver {
+                font-size: 28px;
+            }
+            
+            .control-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+        }
     </style>
 </head>
 <body>
     <div id="gameContainer">
-        <canvas id="gameCanvas" width="800" height="600"></canvas>
+        <canvas id="gameCanvas"></canvas>
         <div id="ui">
             <div>Score: <span id="score">0</span></div>
             <div>Level: <span id="level">1</span></div>
             <div>Speed: <span id="speed">1</span></div>
             <div style="margin-top: 10px;">
                 <label for="particleSlider" style="color: #ff00ff; font-size: 14px;">Particle Intensity:</label>
-                <input type="range" id="particleSlider" min="1" max="10" value="3" style="width: 100px; margin-left: 10px;">
+                <input type="range" id="particleSlider" min="1" max="10" value="3" style="width: 80px; margin-left: 10px;">
                 <span id="particleValue" style="color: #ff00ff; margin-left: 5px;">3</span>
             </div>
+        </div>
+        <div id="mobileControls" style="display: none;">
+            <div id="dpad">
+                <button id="upBtn" class="control-btn">↑</button>
+                <div class="middle-row">
+                    <button id="leftBtn" class="control-btn">←</button>
+                    <button id="rightBtn" class="control-btn">→</button>
+                </div>
+                <button id="downBtn" class="control-btn">↓</button>
+            </div>
+        </div>
         </div>
         <div id="startScreen">
             <div class="neon-text">NEON SNAKE</div>
